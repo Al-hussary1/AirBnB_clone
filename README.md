@@ -96,6 +96,8 @@ This console also works in non-interactive mode:
          (hbnb) 
          (hbnb) 
          (hbnb) quit $
-Authors 📝
+Authors
+
 Gbadamosi Ridwan <Al-hussary>
+
 Hezekiah Osuolale
