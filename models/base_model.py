@@ -1,64 +1,78 @@
 #!/usr/bin/python3
 """
-A module that implements the BaseModel class
+Class base model
 """
-
-from uuid import uuid4
 from datetime import datetime
+import uuid
+import models
 
 
 class BaseModel:
     """
-    A class that defines all common attributes/methods for other classes
+    BaseModel that defines all common attributes/methods for other classes
+    PUBLIC INSTANCE ATTRIBUTES:
+    id: string - assign with an uuid when an instance is created
+         uuid.uuid4(): generate a unique id but cant forget to
+         convert to string. The goal is to have a unique id for each BaseModel
+    created_at:  datetime - assign with the current datetime when an instance
+                 is created
+    updated_at: datetime - assign with the current datetime when an instance
+                is created and it will be updated every time you change your
+                object
+    __str__: should print: [<class name>] (<self.id>) <self.__dict__>
+    PUBLIC INSTANCE METHODS
+    save(self):
+    to_dict(self):
     """
-
     def __init__(self, *args, **kwargs):
-        """
-        Initialize the BaseModel class
-        """
-
-        from models import storage
-        if not kwargs:
-            self.id = str(uuid4())
-            self.created_at = self.updated_at = datetime.now()
-            storage.new(self)
-        else:
+        """ initialization """
+        if kwargs:
             for key, value in kwargs.items():
-                if key != '__class__':
-                    if key in ('created_at', 'updated_at'):
-                        setattr(self, key, datetime.fromisoformat(value))
-                    else:
-                        setattr(self, key, value)
+                if key == "created_at" or key == "updated_at":
+                    setattr(self, key,
+                            datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f"))
+                elif key == "__class__":
+                    setattr(self, key, type(self))
+                else:
+                    setattr(self, key, value)
+        else:
+            self.id = str(uuid.uuid4())
+            self.created_at = datetime.now()
+            self.updated_at = datetime.now()
+            models.storage.new(self)
 
     def __str__(self):
         """
-        Returns the string representation of BaseModel object.
-        [<class name>] (<self.id>) <self.__dict__>
+        __str__ method should print: [<class name>] (<self.id>) <self.__dict__>
         """
-        return "[{}] ({}) {}".format(type(self).__name__, self.id,
+        return "[{}] ({}) {}".format(self.__class__.__name__,
+                                     self.id,
                                      self.__dict__)
 
     def save(self):
         """
-        Updates 'self.updated_at' with the current datetime
+        save method  updates the public instance attribute updated_at
+        with the current datetim
         """
-        from models import storage
         self.updated_at = datetime.now()
-        storage.save()
+        models.storage.save()
 
     def to_dict(self):
         """
-        returns a dictionary containing all keys/values of __dict__
-        of the instance:
-        - only instance attributes set will be returned
-        - a key __class__ is added with the class name of the object
-        - created_at and updated_at must be converted to string object in ISO
-        object
+        This method will be the first piece of the serialization/
+        deserialization process: create a dictionary representation
+        with simple object type of our BaseModel.
+        By using self.__dict__, only instance attributes set will be returned.
+        A key __class__ must be added to this dictionary with the class name
+        of the object.
+        created_at and updated_at must be converted to string object in
+        ISO format.
+        Format: %Y-%m-%dT%H:%M:%S.%f (ex: 2017-06-14T22:31:03.285259)
+        Returns: a dictionary containing all keys/values of __dict__
+                 of the instance.
         """
-        dict_1 = self.__dict__.copy()
-        dict_1["__class__"] = self.__class__.__name__
-        for k, v in self.__dict__.items():
-            if k in ("created_at", "updated_at"):
-                v = self.__dict__[k].isoformat()
-                dict_1[k] = v
-        return dict_1
+        new_dict = dict(self.__dict__)
+        new_dict["__class__"] = type(self).__name__
+        new_dict["created_at"] = new_dict["created_at"].isoformat()
+        new_dict["updated_at"] = new_dict["updated_at"].isoformat()
+        return new_dict
